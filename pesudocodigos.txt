@@ -1,0 +1,170 @@
+class Pagina:
+def init(self) -> None:
+self.numChaves: int = 0
+self.chaves: list = [NULO](ORDEM-1)
+self.filhos: list = [NULO]ORDEM
+
+=====================================================
+PSEUDOCÓDIGOS - ÁRVORE-B: BUSCA E INSERÇÃO
+=====================================================
+
+
+1 - BUSCA NA ÁRVORE
+-----------------------------------------------------
+FUNÇÃO buscaNaArvore(chave, rrn)
+  se rrn == NULO então  # condição de parada da recursão
+    retorne Falso, NULO, NULO
+  senão
+    leia a página armazenada no rrn para pag
+    achou, pos = buscaNaPagina(chave, pag)
+    # POS recebe a posição em que CHAVE ocorre em PAG 
+    # ou deveria ocorrer se estivesse em PAG 
+    se achou então
+      retorne Verdadeiro, rrn, pos
+    senão
+      # busque na página filha
+      retorne buscaNaArvore(chave, pag.filhos[pos])
+    fim se
+  fim se
+fim FUNÇÃO
+
+
+2 - BUSCA NA PÁGINA
+-----------------------------------------------------
+FUNÇÃO buscaNaPagina(chave, pag)
+  faça pos receber 0
+  enquanto pos < pag.numChaves e chave > pag.chaves[pos] faça
+    incremente pos
+  se pos < pag.numChaves e chave == pag.chaves[pos] então
+    retorne Verdadeiro, pos
+  senão
+    retorne Falso, pos
+fim FUNÇÃO
+
+
+3 - INSERÇÃO DE CHAVE (COM DIVISÃO E PROMOÇÃO)
+-----------------------------------------------------
+FUNÇÃO insereChave(chave, rrnAtual)
+  se rrnAtual == NULO então  # condição de parada da recursão
+    chavePro = chave
+    filhoDpro = NULO
+    retorne chavePro, filhoDpro, Verdadeiro
+  senão
+    leia a página armazenada em rrnAtual para pag
+    achou, pos = buscaNaPagina(chave, pag)
+  fim se
+
+  se achou então
+    gere um erro de valor – "Chave duplicada"
+  fim se
+
+  chavePro, filhoDpro, promo = insereChave(chave, pag.filhos[pos])
+
+  # continuação, logo após a chamada recursiva
+  se não promo então
+    retorne NULO, NULO, Falso
+  senão
+    se existe espaço em pag para inserir chavePro então
+      insira chavePro e filhoDpro (chave promovida e filha) em pag
+      escreva pag no arquivo em rrnAtual
+      retorne NULO, NULO, Falso
+    senão
+      chavePro, filhoDpro, pag, novaPag = divide(chavePro, filhoDpro, pag)
+      escreva pag no arquivo em rrnAtual
+      escreva novaPag no arquivo em filhoDpro
+      retorne chavePro, filhoDpro, Verdadeiro
+    fim se
+  fim se
+fim função
+
+
+4 -  LEITURA DE PÁGINA
+-----------------------------------------------------
+FUNÇÃO lePagina(rrn)
+  calcule o byte-offset da página a partir de rrn
+  faça seek no arquivo árvore-B para o byte-offset calculado
+  leia do arquivo árvore-B para pag
+  retorne pag
+fim FUNÇÃO
+
+
+5 - ESCRITA DE PÁGINA
+-----------------------------------------------------
+FUNÇÃO escrevePagina(rrn, pag)
+  calcule o byte-offset da página a partir do rrn
+  faça seek no arquivo árvore-B para o byte-offset calculado
+  escreva pag no arquivo árvore-B
+fim FUNÇÃO
+
+
+6 - INSERÇÃO DE CHAVE E FILHO PROMOVIDOS EM UMA PÁGINA
+-----------------------------------------------------
+FUNÇÃO insereChavePromo(chave, filhoD, pag)
+  se pag estiver cheia, aumente a sua capacidade
+  faça i receber pag.numChaves
+  enquanto i > 0 e chave < pag.chaves[i-1] faça
+    pag.chaves[i] = pag.chaves[i-1]
+    pag.filhos[i+1] = pag.filhos[i]
+    decremente i
+  faça pag.chaves[i] receber chave
+  faça pag.filhos[i+1] receber filhoD
+  incremente pag.numChaves
+fim FUNÇÃO
+
+
+7 - DIVISÃO DE PÁGINA
+-----------------------------------------------------
+FUNÇÃO divide(chave, filhoD, pag)
+  insira chave e filhoD em pag  # usando a função insereChavePromo
+  faça meio receber ORDEM // 2
+  faça chavePro receber pag.chaves[meio]
+  faça filhoDpro receber o RRN que a pNova terá no arquivo árvore-b
+  faça pAtual receber o conteúdo de pag até meio
+  faça pNova receber o conteúdo de pag a partir de meio+1
+  retorne chavePro, filhoDpro, pAtual, pNova
+fim FUNÇÃO
+
+
+8 - CÁLCULO DO NOVO RRN
+-----------------------------------------------------
+FUNÇÃO novoRRN()
+  faça seek para o fim do arquivo
+  faça offset receber o byte-offset atual
+  retorne (offset – TAM_CAB) // TAM_PAG
+fim FUNÇÃO
+
+
+9 -  INSERÇÃO NA ÁRVORE (TRATA PROMOÇÃO DA RAIZ)
+-----------------------------------------------------
+FUNÇÃO insereNaArvore(chave, raiz)
+  chavePro, filhoDpro, promoção = insereChave(chave, raiz)
+  se promoção então
+    inicialize pNova
+    pNova.chaves[0] = chavePro   # nova chave raiz
+    pNova.filhos[0] = raiz       # filho esquerdo
+    pNova.filhos[1] = filhoDpro  # filho direito
+    incremente pNova.numChaves
+    faça raiz receber o RRN da pNova  # RRN da nova raiz
+    escreva pNova no arquivo em raiz
+  fim se
+  retorne raiz
+fim FUNÇÃO
+
+
+10 - FUNÇÃO PRINCIPAL
+-----------------------------------------------------
+FUNÇÃO principal()
+  se o arquivo árvore-B existir então
+    abra-o para leitura e escrita como arqArvb
+    leia o cabeçalho e armazene-o em raiz
+  senão
+    abra um novo arquivo para leitura e escrita como arqArvb
+    faça raiz receber 0 e a escreva no cabeçalho de arqArvb
+    inicialize pag e a escreva no arquivo arqArvb
+  fim se
+  para cada chave a ser inserida faça
+    raiz = insereNaArvore(chave, raiz)
+  fim para
+  escreva raiz no cabeçalho do arquivo arqArvb
+  feche o arquivo arqArvb
+fim FUNÇÃO
