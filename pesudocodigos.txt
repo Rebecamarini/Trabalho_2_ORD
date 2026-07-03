@@ -1,8 +1,8 @@
 class Pagina:
-def init(self) -> None:
-self.numChaves: int = 0
-self.chaves: list = [NULO](ORDEM-1)
-self.filhos: list = [NULO]ORDEM
+    def init(self) -> None:
+        self.numChaves: int = 0
+        self.chaves: list = [NULO] * (ORDEM-1)
+        self.filhos: list = [NULO] * ORDEM
 
 =====================================================
 PSEUDOCÓDIGOS - ÁRVORE-B: BUSCA E INSERÇÃO
