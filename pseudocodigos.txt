@@ -14,7 +14,7 @@ PSEUDOCÓDIGOS - ÁRVORE-B: BUSCA E INSERÇÃO
 O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para implementarmos
 =====================================================
 
-
+# -----------------------------------------------------
 # LEITURA DE PÁGINA
 # -----------------------------------------------------
 # FUNÇÃO lePagina(rrn)
@@ -24,7 +24,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   retorne pag
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # ESCRITA DE PÁGINA
 # -----------------------------------------------------
 # FUNÇÃO escrevePagina(rrn, pag)
@@ -33,7 +33,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   escreva pag no arquivo árvore-B
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # CÁLCULO DO NOVO RRN
 # -----------------------------------------------------
 # FUNÇÃO novoRRN()
@@ -42,7 +42,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   retorne (offset – TAM_CAB) // TAM_PAG
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # BUSCA NA PÁGINA
 # -----------------------------------------------------
 # FUNÇÃO buscaNaPagina(chave, pag)
@@ -55,7 +55,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #     retorne Falso, pos
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # BUSCA NA ÁRVORE
 # -----------------------------------------------------
 # FUNÇÃO buscaNaArvore(chave, rrn)
@@ -75,7 +75,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   fim se
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # INSERÇÃO DE CHAVE E FILHO PROMOVIDOS EM UMA PÁGINA
 # -----------------------------------------------------
 # FUNÇÃO insereChavePromo(chave, filhoD, pag)
@@ -90,7 +90,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   incremente pag.numChaves
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # DIVISÃO DE PÁGINA
 # -----------------------------------------------------
 # FUNÇÃO divide(chave, filhoD, pag)
@@ -103,7 +103,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   retorne chavePro, filhoDpro, pAtual, pNova
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # INSERÇÃO DE CHAVE (COM DIVISÃO E PROMOÇÃO)
 # -----------------------------------------------------
 # FUNÇÃO insereChave(chave, rrnAtual)
@@ -139,7 +139,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   fim se
 # fim função
 
-
+# -----------------------------------------------------
 # INSERÇÃO NA ÁRVORE (TRATA PROMOÇÃO DA RAIZ)
 # -----------------------------------------------------
 # FUNÇÃO insereNaArvore(chave, raiz)
@@ -156,7 +156,7 @@ O shimano pediu para o chatGPT colocar os pseudocódigos em uma boa ordem para i
 #   retorne raiz
 # fim FUNÇÃO
 
-
+# -----------------------------------------------------
 # FUNÇÃO PRINCIPAL
 # -----------------------------------------------------
 # FUNÇÃO principal()
