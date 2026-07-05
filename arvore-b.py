@@ -4,20 +4,23 @@ from struct import pack, unpack, calcsize
 NULO = -1
 ORDEM = 4
 
-# Convencionamos que:
-# - Cabeçalho guarda o RRN da raiz no fomrato 'H' (int de 2 bytes sem sinal)
-# - Chaves no formato 'ii' (id -> 'i' e byte offset -> 'i')
-# - Filhos no formato 'i'
-# Exemplo de Página de uma árvore-b de ordem = 4:
+# Exemplo da página de uma árvore-b de ordem = 4:
 # num_chaves chave chave chave rrnFilho rrnFilho rrnFilho rrnFilho
-ORDEM_BYTES = "<"
-FORMATO_CAB = "H"
+
+# Número de chaves no formato 'H' (int de 2 bytes sem sinal)
+# Chaves no formato 'ii' (id -> 'i' e byte offset -> 'i')
+# RRN dos filhos no formato 'i'
+PREFIXO = "<"
+FORMATO_NUM_CHAVES = "H"
 FORMATO_ID = "i"
 FORMATO_BYTE_OFFSET = "i"
 FORMATO_RRN_FILHO = "i"
-FORMATO_PAG = ORDEM_BYTES + FORMATO_CAB + (FORMATO_ID+FORMATO_BYTE_OFFSET)*(ORDEM-1) + FORMATO_RRN_FILHO*ORDEM
-TAM_CAB = calcsize(ORDEM_BYTES + FORMATO_CAB)
+FORMATO_PAG = PREFIXO + FORMATO_NUM_CHAVES + (FORMATO_ID+FORMATO_BYTE_OFFSET)*(ORDEM-1) + FORMATO_RRN_FILHO*ORDEM
 TAM_PAG = calcsize(FORMATO_PAG)
+
+# A nossa árvore terá um cabeçalho que guarda o rrn da página raiz
+FORMATO_CAB = "H"
+TAM_CAB = calcsize(PREFIXO + FORMATO_CAB)
 
 class Chave:
     '''
@@ -133,14 +136,14 @@ def escreve_pagina(rrn: int, pag: Pagina) -> None:
     with open("btree.dat", 'r+b') as arq_arvore_b:
         arq_arvore_b.seek(pos_escrita_pag)
         
-        arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_CAB, pag.num_chaves))
+        arq_arvore_b.write(pack(PREFIXO + FORMATO_NUM_PAG, pag.num_chaves))
 
         for chave in pag.chaves:
-            arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_ID, chave.id))
-            arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_BYTE_OFFSET, chave.byte_offset))
+            arq_arvore_b.write(pack(PREFIXO + FORMATO_ID, chave.id))
+            arq_arvore_b.write(pack(PREFIXO + FORMATO_BYTE_OFFSET, chave.byte_offset))
         
         for filho in pag.rrn_filhos:
-            arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_RRN_FILHO, filho))
+            arq_arvore_b.write(pack(PREFIXO + FORMATO_RRN_FILHO, filho))
 # -----------------------------------------------------
 
 # -----------------------------------------------------
@@ -152,14 +155,14 @@ def escreve_pagina(rrn: int, pag: Pagina) -> None:
 #   retorne (offset – TAM_CAB) // TAM_PAG
 # fim FUNÇÃO
 
-def novo_rrn ():
-    ''' Calcula o novo rrn da proxima pagina que sera gravada 
-    no arquivo da arvore.
+def novo_rrn() -> int:
+    ''' 
+    Calcula o rrn da proxima pagina que sera gravada no arquivo da arvore.
     '''
-    arq = open('games.dat', 'rb')
+    arq = open('btree.dat', 'rb')
     arq.seek(0, 2)
     offset = arq.tell()
-    return (offset - TAM_CAB)// TAM_PAG
+    return (offset - TAM_CAB) // TAM_PAG
 # -----------------------------------------------------
 
 
