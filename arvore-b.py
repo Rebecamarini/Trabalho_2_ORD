@@ -132,9 +132,9 @@ def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
     Retorna a posicao em que ela esta
     '''
     pos = 0 
-    while pos < pagina.numChaves and chave > pagina.chaves[pos]:
+    while pos < pagina.num_chaves and chave > pagina.chaves[pos]:
         pos =+1 
-    if pos < pos < pagina.numChaves and chave == pagina.chaves[pos]:
+    if pos < pos < pagina.num_chaves and chave == pagina.chaves[pos]:
         return True, pos
     else:
         return False, pos
