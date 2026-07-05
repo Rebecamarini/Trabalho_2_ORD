@@ -19,7 +19,7 @@ FORMATO_PAG = PREFIXO + FORMATO_NUM_CHAVES + (FORMATO_ID+FORMATO_BYTE_OFFSET)*(O
 TAM_PAG = calcsize(FORMATO_PAG)
 
 # A nossa árvore terá um cabeçalho que guarda o rrn da página raiz
-FORMATO_CAB = "H"
+FORMATO_CAB = "i"
 TAM_CAB = calcsize(PREFIXO + FORMATO_CAB)
 
 class Chave:
@@ -84,7 +84,7 @@ def constroi_pagina(infos_pag: tuple) -> Pagina:
         chave.byte_offset = infos_pag[(i*2)+2]
         chaves_pag.append(chave)
     
-    # Inserção dos rrn dos filhos de *infos_pag* em *chaves_pag*
+    # Inserção dos RRNs dos filhos de *infos_pag* em *chaves_pag*
     for i in range(ORDEM):
         rrn_filho: int = infos_pag[(ORDEM-1)*2 + 1 + i]
         rrn_filhos_pag.append(rrn_filho)
@@ -129,14 +129,14 @@ def le_pagina(rrn: int) -> Pagina:
 
 def escreve_pagina(rrn: int, pag: Pagina) -> None:
     '''
-    Essa função vai escrever *pag* no rrn *rrn* de btree.dat
+    Escreve *pag* no rrn *rrn* de btree.dat
     '''
     pos_escrita_pag: int = calcula_pos_inicio_pag(rrn)
 
     with open("btree.dat", 'r+b') as arq_arvore_b:
         arq_arvore_b.seek(pos_escrita_pag)
         
-        arq_arvore_b.write(pack(PREFIXO + FORMATO_NUM_PAG, pag.num_chaves))
+        arq_arvore_b.write(pack(PREFIXO + FORMATO_NUM_CHAVES, pag.num_chaves))
 
         for chave in pag.chaves:
             arq_arvore_b.write(pack(PREFIXO + FORMATO_ID, chave.id))
@@ -157,12 +157,12 @@ def escreve_pagina(rrn: int, pag: Pagina) -> None:
 
 def novo_rrn() -> int:
     ''' 
-    Calcula o rrn da proxima pagina que sera gravada no arquivo da arvore.
+    Calcula o rrn da proxima pagina que sera gravada no arquivo da árvore.
     '''
-    arq = open('btree.dat', 'rb')
-    arq.seek(0, 2)
-    offset = arq.tell()
-    return (offset - TAM_CAB) // TAM_PAG
+    with open('btree.dat', 'rb') as arq_arvore_b:
+        arq_arvore_b.seek(0, 2)
+        tam_arq = arq_arvore_b.tell()
+        return (tam_arq - TAM_CAB) // TAM_PAG
 # -----------------------------------------------------
 
 
@@ -180,16 +180,19 @@ def novo_rrn() -> int:
 # fim FUNÇÃO
 
 def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
-    '''busca *chave* na pagina que contem a chave buscada 
-    Retorna a posicao em que ela esta
     '''
-    pos = 0 
-    while pos < pagina.num_chaves and chave > pagina.chaves[pos]:
-        pos =+1 
-    if pos < pos < pagina.num_chaves and chave == pagina.chaves[pos]:
-        return True, pos
+    Busca *chave* em *pagina*
+    Retorna um ou outro:
+    - True e a posição que a chave está na página
+    - False e a posição que a chave deveria estar nos filhos
+    '''
+    pos_chave: int = 0
+    while pos_chave < pagina.num_chaves and chave > pagina.chaves[pos_chave].id:
+        pos_chave += 1 
+    if pos_chave < pagina.num_chaves and chave == pagina.chaves[pos_chave].id:
+        return True, pos_chave
     else:
-        return False, pos
+        return False, pos_chave
 # -----------------------------------------------------
 
 
@@ -215,7 +218,7 @@ def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
 
 def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
     '''
-    busca *chave* na árvore-b que a raiz tem o rrn *rrn*
+    Busca *chave* em uma árvore-B onde a raiz tem o rrn *rrn*
     Retorna uma tupla com:
     - Se o elemento foi achado ou não
     - O rrn da página
@@ -224,12 +227,12 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
     if rrn == NULO:
         return False, NULO, NULO
     else:
-        pag: Pagina = le_pagina("games.dat")
+        pag: Pagina = le_pagina(rrn)
         achou, pos = busca_na_pagina(chave, pag)
         if achou:
             return True, rrn, pos
         else:
-            return busca_na_arvore(chave, pag.filhos[pos])
+            return busca_na_arvore(chave, pag.rrn_filhos[pos])
 # -----------------------------------------------------
 
 
@@ -334,9 +337,7 @@ def main() -> None:
     if flag == '-b':
         # Criação do índice (árvore-B) a partir do arquivo de registros
         print("flag -b")
-        
-        with open('btree.dat', 'wb') as arq_arvore_b:
-            print("Arquivo criado com sucesso!")
+
     
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
