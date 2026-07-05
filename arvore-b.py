@@ -1,12 +1,12 @@
 from sys import argv
 
-NULO = -1
+NULO: int = -1
 ORDEM: int = 4
 
 class Pagina:
     def init(self) -> None:
         self.numChaves: int = 0
-        self.chaves: list = [NULO] * (ORDEM-1) # as chaves são um par [chave, byte_offset]
+        self.chaves: list = [NULO] * (ORDEM - 1) # as chaves são um par [chave, byte_offset]
         self.filhos: list = [NULO] * ORDEM
 
 def main() -> None: 
@@ -15,6 +15,9 @@ def main() -> None:
     if flag == '-b':
         # Criação do índice (árvore-B) a partir do arquivo de registros
         print("flag -b")
+        
+        with open('btree.dat', 'wb') as arq_arvore_b:
+            print("Arquivo criado com sucesso!")
     
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
