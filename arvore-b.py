@@ -3,41 +3,38 @@ from struct import pack, unpack, calcsize
 
 NULO = -1
 ORDEM = 4
+
+# Convencionamos que:
+# - Cabeçalho no fomrato 'H' (int de 2 bytes sem sinal)
+# - Chaves no formato 'ii' (id -> 'i' e byte offset -> 'i')
+# - Filhos no formato 'i'
+# Exemplo de Página de uma árvore-b de ordem = 4:
+# num_chaves chave chave chave rrnFilho rrnFilho rrnFilho rrnFilho
 TAM_CAB = 2
-
-# *inventei que o id e o byte offset serão armazenados no formato 'i', logo:
-# - id no formato 'i'
-# - byte offset no formato 'i'
-FORMATO_PAG = "h" + "ii"*(ORDEM-1) + "i"*ORDEM
-
+FORMATO_PAG = "H" + "ii"*(ORDEM-1) + "i"*ORDEM
 TAM_PAG = calcsize(FORMATO_PAG)
-#usar lista de paginas, rrn seria o elemento 
+
+# usar lista de paginas, rrn seria o elemento 
 class Pagina:
     def __init__(self) -> None:
         self.num_chaves: int = 0
         self.chaves: list = [NULO] * (ORDEM - 1) # as chaves são um par [id, byte_offset]
         self.filhos: list = [NULO] * ORDEM
-        
-"""
-Parte do enunciado do trabalho:
-sendo programa.py o nome do arquivo com o seu código e -b a flag que sinaliza o modo de criação do índice. 
-Sempre que ativada, essa funcionalidade lerá o arquivo games.dat e fará a inserção dos pares {chave, byte-offset} 
-na árvore-B que deverá ser armazenada em um arquivo binário chamado btree.dat
 
-Página:
-|numChaves|chave chave chave|rrnFilho rrnFilho rrnFilho rrnFilho|
-"""
+'''
+Função ainda não implementada:
 
-# def separa_id():
-#     with open('games.dat', 'rb') as jogos:
-#             tam_bytes = jogos.read(2)
+def separa_id():
+    with open('games.dat', 'rb') as jogos:
+            tam_bytes = jogos.read(2)
             
-#             while tam_bytes:
-#                 tam_int = int.from_bytes(tam_bytes, 'little')
-#                 registro = jogos.read(tam_int).decode('utf-8')
-#                 campos = registro.split(sep='|')
-#                 id = int(campos[0])
-#     return id, 
+            while tam_bytes:
+                tam_int = int.from_bytes(tam_bytes, 'little')
+                registro = jogos.read(tam_int).decode('utf-8')
+                campos = registro.split(sep='|')
+                id = int(campos[0])
+    return id,
+''' 
 
 # 4 -  LEITURA DE PÁGINA
 # -----------------------------------------------------
