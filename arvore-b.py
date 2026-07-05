@@ -1,16 +1,32 @@
 from sys import argv
-import struct
-NULO: int = -1
-ORDEM: int = 4
+from struct import pack, unpack, calcsize
+
+NULO = -1
+ORDEM = 4
 TAM_CAB = 2
-FORMATO_PAG = f"i{ORDEM-1}i{ORDEM-1}i{ORDEM}i"
-TAM_PAG = struct.calcsize(FORMATO_PAG)
+
+# *inventei que o id e o byte offset serão armazenados no formato 'i', logo:
+# - id no formato 'i'
+# - byte offset no formato 'i'
+FORMATO_PAG = "h" + "ii"*(ORDEM-1) + "i"*ORDEM
+
+TAM_PAG = calcsize(FORMATO_PAG)
 #usar lista de paginas, rrn seria o elemento 
 class Pagina:
-    def init(self) -> None:
-        self.numChaves: int = 0
-        self.chaves: list = [NULO] * (ORDEM - 1) # as chaves são um par [chave, byte_offset]
+    def __init__(self) -> None:
+        self.num_chaves: int = 0
+        self.chaves: list = [NULO] * (ORDEM - 1) # as chaves são um par [id, byte_offset]
         self.filhos: list = [NULO] * ORDEM
+        
+"""
+Parte do enunciado do trabalho:
+sendo programa.py o nome do arquivo com o seu código e -b a flag que sinaliza o modo de criação do índice. 
+Sempre que ativada, essa funcionalidade lerá o arquivo games.dat e fará a inserção dos pares {chave, byte-offset} 
+na árvore-B que deverá ser armazenada em um arquivo binário chamado btree.dat
+
+Página:
+|numChaves|chave chave chave|rrnFilho rrnFilho rrnFilho rrnFilho|
+"""
 
 # def separa_id():
 #     with open('games.dat', 'rb') as jogos:
@@ -32,15 +48,49 @@ class Pagina:
 #   retorne pag
 # fim FUNÇÃO
 
+# def constroi_pagina() -> tuple
+
 def le_pagina(rrn: int) -> Pagina:
     '''
-    Essa função vai ler a página de rrn *rrn* armazenada no btree.dat e retorna-lá com um dado do tipo Pagina
+    Essa função vai ler a página de rrn *rrn* armazenada no btree.dat e retorná-la com um dado do tipo Pagina
     '''
-    inicio_pag: int = TAM_CAB + (TAM_PAG * rrn)
+    pos_inicio_pag: int = TAM_CAB + (TAM_PAG * rrn)
     with open("btree.dat", 'rb') as arq_arvore_b:
-        arq_arvore_b.seek(0, inicio_pag)
+        arq_arvore_b.seek(0, pos_inicio_pag) # movo o ponteiro do arquivo até o início da página
+        pag_bytes: bytes = arq_arvore_b.read(TAM_PAG) # leio a página
+        infos_pag: tuple = unpack(FORMATO_PAG, pag_bytes)
+        
+        pag: Pagina = Pagina()
+        pag.num_chaves = infos_pag[0]
+        # pag.chaves = infos_pag[1]
+        # pag.filhos = infos_pag[2]
     
-    pass
+    return pag
+
+# 5 - ESCRITA DE PÁGINA
+# -----------------------------------------------------
+# FUNÇÃO escrevePagina(rrn, pag)
+#   calcule o byte-offset da página a partir do rrn
+#   faça seek no arquivo árvore-B para o byte-offset calculado
+#   escreva pag no arquivo árvore-B
+# fim FUNÇÃO
+
+def escreve_pagina(rrn: int, pag: Pagina) -> None:
+    '''
+    Essa função vai escrever *pag* no rrn *rrn* de btree.dat
+    '''
+    pos_inicio_pag: int = TAM_CAB + (TAM_PAG * rrn)
+
+    with open("btree.dat", 'r+b') as arq_arvore_b:
+        arq_arvore_b.seek(pos_inicio_pag)
+        arq_arvore_b.write(pack("h", pag.num_chaves))
+
+        for chave in pag.chaves:
+            arq_arvore_b.write(pack("i", chave))
+        
+        for filho in pag.filhos:
+            arq_arvore_b.write(pack("i", filho))
+        
 
 # 1 - BUSCA NA ÁRVORE
 # -----------------------------------------------------
@@ -78,6 +128,7 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
             return True, rrn, pos
         else:
             return busca_na_arvore(chave, pag.filhos[pos])
+        
 
 def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
     '''busca *chave* na pagina que contem a chave buscada 
