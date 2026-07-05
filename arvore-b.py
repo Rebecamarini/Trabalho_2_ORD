@@ -5,13 +5,18 @@ NULO = -1
 ORDEM = 4
 
 # Convencionamos que:
-# - Cabeçalho no fomrato 'H' (int de 2 bytes sem sinal)
+# - Cabeçalho guarda o RRN da raiz no fomrato 'H' (int de 2 bytes sem sinal)
 # - Chaves no formato 'ii' (id -> 'i' e byte offset -> 'i')
 # - Filhos no formato 'i'
 # Exemplo de Página de uma árvore-b de ordem = 4:
 # num_chaves chave chave chave rrnFilho rrnFilho rrnFilho rrnFilho
-TAM_CAB = 2
-FORMATO_PAG = "H" + "ii"*(ORDEM-1) + "i"*ORDEM
+ORDEM_BYTES = "<"
+FORMATO_CAB = "H"
+FORMATO_ID = "i"
+FORMATO_BYTE_OFFSET = "i"
+FORMATO_RRN_FILHO = "i"
+FORMATO_PAG = ORDEM_BYTES + FORMATO_CAB + (FORMATO_ID+FORMATO_BYTE_OFFSET)*(ORDEM-1) + FORMATO_RRN_FILHO*ORDEM
+TAM_CAB = calcsize(ORDEM_BYTES + FORMATO_CAB)
 TAM_PAG = calcsize(FORMATO_PAG)
 
 class Chave:
@@ -26,8 +31,10 @@ class Chave:
 class Pagina:
     def __init__(self) -> None:
         self.num_chaves: int = 0
-        self.chaves: list[Chave] = [Chave()] * (ORDEM - 1) # As chaves são um par [id, byte_offset]
-        self.filhos: list = [NULO] * ORDEM
+        self.chaves: list[Chave] = []
+        for _ in range(ORDEM - 1):
+            self.chaves.append(Chave())
+        self.rrn_filhos: list[int] = [NULO] * ORDEM
 
 '''
 def separa_id():
@@ -52,19 +59,38 @@ def separa_id():
 #   retorne pag
 # fim FUNÇÃO
 
+def calcula_pos_inicio_pag(rrn: int) -> int:
+    '''
+    Retorna o byte offset do início da página de rrn *rrn*
+    '''
+    return TAM_CAB + (TAM_PAG * rrn)
+    
 def constroi_pagina(infos_pag: tuple) -> Pagina:
     '''
     Recebe as informações de uma página em *infos* e as retorna como um dado do tipo Pagina
     '''
-    # Criação das listas que colocarei as chaves e rr dos filhos que estão em *infos_pag*
-    chaves_pag: list[int] = []
+    # Criação das listas que colocarei as chaves e rrn dos filhos que estão em *infos_pag*
+    num_chaves: int = infos_pag[0]
+    chaves_pag: list[Chave] = []
     rrn_filhos_pag: list[int] = []
     
     # Inserção das chaves de *infos_pag* em *chaves_pag*
+    for i in range(ORDEM - 1):
+        chave: Chave = Chave()
+        chave.id = infos_pag[(i*2)+1]
+        chave.byte_offset = infos_pag[(i*2)+2]
+        chaves_pag.append(chave)
+    
+    # Inserção dos rrn dos filhos de *infos_pag* em *chaves_pag*
+    for i in range(ORDEM):
+        rrn_filho: int = infos_pag[(ORDEM-1)*2 + 1 + i]
+        rrn_filhos_pag.append(rrn_filho)
     
     # Criação e preenchimento da página
     pag: Pagina = Pagina()
-    pag.num_chaves = infos_pag[0]
+    pag.num_chaves = num_chaves
+    pag.chaves = chaves_pag
+    pag.rrn_filhos = rrn_filhos_pag
     
     # Coloca como saída a página criada
     return pag
@@ -73,7 +99,7 @@ def le_pagina(rrn: int) -> Pagina:
     '''
     Lê a página de rrn *rrn* armazenada no btree.dat e a retorna com um dado do tipo Pagina
     '''
-    pos_inicio_pag: int = TAM_CAB + (TAM_PAG * rrn)
+    pos_inicio_pag: int = calcula_pos_inicio_pag(rrn)
     
     with open("btree.dat", 'rb') as arq_arvore_b:
         # Movimentação do ponteiro do *arq_arvore_b* até o início da página
@@ -102,17 +128,19 @@ def escreve_pagina(rrn: int, pag: Pagina) -> None:
     '''
     Essa função vai escrever *pag* no rrn *rrn* de btree.dat
     '''
-    pos_inicio_pag: int = TAM_CAB + (TAM_PAG * rrn)
+    pos_escrita_pag: int = calcula_pos_inicio_pag(rrn)
 
     with open("btree.dat", 'r+b') as arq_arvore_b:
-        arq_arvore_b.seek(pos_inicio_pag)
-        arq_arvore_b.write(pack("h", pag.num_chaves))
+        arq_arvore_b.seek(pos_escrita_pag)
+        
+        arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_CAB, pag.num_chaves))
 
         for chave in pag.chaves:
-            arq_arvore_b.write(pack("i", chave))
+            arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_ID, chave.id))
+            arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_BYTE_OFFSET, chave.byte_offset))
         
-        for filho in pag.filhos:
-            arq_arvore_b.write(pack("i", filho))
+        for filho in pag.rrn_filhos:
+            arq_arvore_b.write(pack(ORDEM_BYTES + FORMATO_RRN_FILHO, filho))
 # -----------------------------------------------------
 
 # -----------------------------------------------------
