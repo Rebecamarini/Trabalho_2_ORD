@@ -39,19 +39,6 @@ class Pagina:
             self.chaves.append(Chave())
         self.rrn_filhos: list[int] = [NULO] * ORDEM
 
-'''
-def separa_id():
-    with open('games.dat', 'rb') as jogos:
-            tam_bytes = jogos.read(2)
-            
-            while tam_bytes:
-                tam_int = int.from_bytes(tam_bytes, 'little')
-                registro = jogos.read(tam_int).decode('utf-8')
-                campos = registro.split(sep='|')
-                id = int(campos[0])
-    return id,
-''' 
-
 # -----------------------------------------------------
 # LEITURA DE PÁGINA
 # -----------------------------------------------------
@@ -251,9 +238,22 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
 #   incremente pag.numChaves
 # fim FUNÇÃO
 
+def insere_chave_promo(chave: int, filhoD: Chave, pag: Pagina) -> None:
+    '''
+    A funcao insere a *chave* e *filho* promovidos em uma pagina
 
-# -----------------------------------------------------
-
+    '''
+    if pag.num_chaves == (ORDEM - 1):
+        pag.chaves.append(Chave())
+        pag.rrn_filhos.append(NULO)
+    i = pag.num_chaves
+    while i > 0 and chave.id < pag.chaves [i-1].id:
+        pag.chaves[i] = pag.chaves[i-1]
+        pag.rrn_filhos[i+1] = pag.rrn_filhos[i]
+        i =  i - 1
+    pag.chaves[i] = chave 
+    pag.rrn_filhos[i+1] = filhoD
+    pag.num_chaves = pag.num_chaves + 1
 
 # -----------------------------------------------------
 # DIVISÃO DE PÁGINA
@@ -269,8 +269,34 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
 # fim FUNÇÃO
 
 # -----------------------------------------------------
+def divide(chave: int, filhoD: Chave, pag:Pagina)-> tuple[int, Chave, Pagina, Pagina]:
+    '''
+    A funcao realiza a divisao de uma *pagina*  em 2 em caso de promocao de *chave* e *filho*
+    Retorna uma tupla com:
+    - A chave promovida 
+    - o filho direito da chave promovida
+    - a pagina atual 
+    - a pagina nova depois da promocao 
+    '''
+    insere_chave_promo(chave, filhoD, pag)
+    meio = ORDEM//2 
+    chave_pro = pag.chaves[meio]
+    filhod_pro = novo_rrn()
+    pag_atual = Pagina()
+    pag_atual.chaves = pag.chaves[:meio] + [Chave() for _ in range(ORDEM - 1 - meio)]
+    pag_atual.rrn_filhos = pag.rrn_filhos[:meio + 1] + [NULO] * (ORDEM - (meio + 1))
+    pag_atual.num_chaves = meio
+ 
+    resto_chaves = pag.chaves[meio + 1:]
+    resto_filhos = pag.rrn_filhos[meio + 1:]
+    pag_nova = Pagina()
+    pag_nova.chaves = resto_chaves + [Chave() for _ in range(ORDEM - 1 - len(resto_chaves))]
+    pag_nova.rrn_filhos = resto_filhos + [NULO] * (ORDEM - len(resto_filhos))
+    pag_nova.num_chaves = len(resto_chaves)
 
+    return chave_pro, filhod_pro, pag_atual, pag_nova
 
+    
 # -----------------------------------------------------
 # INSERÇÃO DE CHAVE (COM DIVISÃO E PROMOÇÃO)
 # -----------------------------------------------------
@@ -306,9 +332,40 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
 #     fim se
 #   fim se
 # fim função
+def insere_chave(chave:Chave, rrn_atual: int) -> tuple[Chave, Chave, bool]:
+    '''
+    A funcao insere a *chave* na pagina com divisao e promocao, 
+    Retorna uma tupla com:
+    - A chave promovida 
+    - o filho direito da chave promovida
+    - e se houve insercao 
+    '''
+    if rrn_atual == NULO:
+        chave_pro = chave 
+        filhod_pro = NULO
+        return chave_pro, filhod_pro, True
+    else:
+        pag = le_pagina(rrn_atual)
+        achou, pos = busca_na_pagina(chave.id, pag)
 
-# -----------------------------------------------------
-
+    if achou:
+        raise ValueError("Erro: Chave duplicada")
+    
+    chave_pro, filhod_pro, promo  = insere_chave(chave,pag.rrn_filhos[pos])
+    if not promo:
+        return NULO, NULO , False
+    else:
+        if pag.num_chaves < (ORDEM - 1):
+            insere_chave_promo(chave_pro, filhod_pro, pag) 
+            escreve_pagina(rrn_atual, pag)
+            return NULO, NULO ,False
+        else:
+    
+            chave_pro, filhod_pro, pag_atual, pag_nova = divide(chave_pro, filhod_pro,pag)
+            escreve_pagina(rrn_atual, pag_atual)
+            escreve_pagina(filhod_pro, pag_nova)
+            return chave_pro, filhod_pro, True
+        
 
 # -----------------------------------------------------
 # INSERÇÃO NA ÁRVORE (TRATA PROMOÇÃO DA RAIZ)
@@ -326,9 +383,96 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
 #   fim se
 #   retorne raiz
 # fim FUNÇÃO
-
-
 # -----------------------------------------------------
+def insere_na_arvore(chave:Chave, raiz:int):
+    chave_pro, filhod_pro, promo = insere_chave(chave,raiz)
+    if promo:
+        pag_nova = Pagina()
+        pag_nova.chaves[0] = chave_pro
+        pag_nova.rrn_filhos[0] = raiz
+        pag_nova.rrn_filhos[1] = filhod_pro
+        pag_nova.num_chaves = pag_nova.num_chaves + 1
+        raiz = novo_rrn()
+        escreve_pagina(raiz,pag_nova)
+    return raiz
+
+def imprime_pagina(rrn, pag):
+    print("Pagina ", rrn, ":")
+
+    linha_chaves = "Chaves  = "
+    linha_offsets = "Offsets = "
+    for i in range(len(pag.chaves)):
+        linha_chaves = linha_chaves + str(pag.chaves[i].id)
+        linha_offsets = linha_offsets + str(pag.chaves[i].byte_offset)
+        if i < len(pag.chaves) - 1:
+            linha_chaves = linha_chaves + " | "
+            linha_offsets = linha_offsets + " | "
+    print(linha_chaves)
+    print(linha_offsets)
+
+    linha_filhos = "Filhos  = "
+    for i in range(len(pag.rrn_filhos)):
+        linha_filhos = linha_filhos + str(pag.rrn_filhos[i])
+        if i < len(pag.rrn_filhos) - 1:
+            linha_filhos = linha_filhos + " | "
+    print(linha_filhos)
+
+
+def constroi_indice() -> None:
+    '''
+    Lê games.dat registro por registro, monta a árvore-B em btree.dat
+    '''
+    # Cria o btree.dat com cabecalho indicando arvore vazia
+    with open('btree.dat', 'wb') as arq_arvore_b:
+        arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, NULO))
+
+    raiz = NULO
+
+    with open('games.dat', 'rb') as jogos:
+        while True:
+            offset = jogos.tell()          # offset
+            tam_bytes = jogos.read(2)
+            if not tam_bytes:
+                break                       # fim do arquivo
+
+            tam_int = int.from_bytes(tam_bytes, 'little')
+            registro = jogos.read(tam_int).decode('utf-8')
+            campos = registro.split(sep='|')
+            id_reg = int(campos[0])
+
+            chave = Chave()
+            chave.id = id_reg
+            chave.byte_offset = offset
+
+            raiz = insere_na_arvore(chave, raiz)
+
+    # atualiza o cabecalho com o RRN final da raiz
+    with open('btree.dat', 'r+b') as arq_arvore_b:
+        arq_arvore_b.seek(0)
+        arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, raiz))
+
+
+def le_raiz() -> int:
+    with open('btree.dat', 'rb') as arq_arvore_b:
+        raiz_bytes = arq_arvore_b.read(TAM_CAB)      # le os primeiros bytes do arquivo (o cabecalho)
+        return unpack(PREFIXO + FORMATO_CAB, raiz_bytes)[0]   # decodifica esses bytes 
+
+def imprime_indice():
+    total_paginas = novo_rrn()
+
+    for rrn in range(total_paginas):
+        raiz = le_raiz()
+        pag = le_pagina(rrn)
+
+        if rrn == raiz:
+            print("- - - - - - - - - - Raiz - - - - - - - - - -")
+
+        imprime_pagina(rrn, pag)
+
+        if rrn == raiz:
+            print("- - - - - - - - - - - - - - - - - - - - - -")
+
+        print()
 
 
 def main() -> None: 
@@ -337,7 +481,7 @@ def main() -> None:
     if flag == '-b':
         # Criação do índice (árvore-B) a partir do arquivo de registros
         print("flag -b")
-
+        constroi_indice()
     
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
@@ -346,6 +490,7 @@ def main() -> None:
     elif flag == '-p':
         # Impressão das informações do índice, i.e., da árvore-B
         print("flag -p")
+        imprime_indice()
         
 if __name__ == '__main__':
     main()
