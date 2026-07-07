@@ -94,7 +94,7 @@ Sempre que ativada, essa funcionalidade apresentará na tela o conteúdo de toda
 
 Como um exemplo, considere uma árvore-B de ordem 5 que indexa um arquivo com os oito primeiros registros do arquivo games.dat.
 
-			Página 2 — raiz
+			           Página 2 — raiz
                          [348 | 484]
                         /     |      \
                        /      |       \

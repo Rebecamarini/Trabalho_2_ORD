@@ -166,17 +166,17 @@ def novo_rrn() -> int:
 #     retorne Falso, pos
 # fim FUNÇÃO
 
-def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
+def busca_na_pagina (id: int, pagina: Pagina) -> tuple[bool, int]:
     '''
-    Busca *chave* em *pagina*
+    Busca a chave de Id *id* em *pagina*
     Retorna um ou outro:
     - True e a posição que a chave está na página
     - False e a posição que a chave deveria estar nos filhos
     '''
     pos_chave: int = 0
-    while pos_chave < pagina.num_chaves and chave > pagina.chaves[pos_chave].id:
+    while pos_chave < pagina.num_chaves and id > pagina.chaves[pos_chave].id:
         pos_chave += 1 
-    if pos_chave < pagina.num_chaves and chave == pagina.chaves[pos_chave].id:
+    if pos_chave < pagina.num_chaves and id == pagina.chaves[pos_chave].id:
         return True, pos_chave
     else:
         return False, pos_chave
@@ -203,9 +203,9 @@ def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
 #   fim se
 # fim FUNÇÃO
 
-def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
+def busca_na_arvore(id: int, rrn: int) -> tuple[bool, int, int]:
     '''
-    Busca *chave* em uma árvore-B onde a raiz tem o RRN *rrn*
+    Busca a chave de Id *id* em uma árvore-B onde a raiz tem o RRN *rrn*
     Retorna uma tupla com:
     - Se o elemento foi achado ou não
     - O rrn da página
@@ -215,11 +215,11 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
         return False, NULO, NULO
     else:
         pag: Pagina = le_pagina(rrn)
-        achou, pos = busca_na_pagina(chave, pag)
+        achou, pos = busca_na_pagina(id, pag)
         if achou:
             return True, rrn, pos
         else:
-            return busca_na_arvore(chave, pag.rrn_filhos[pos])
+            return busca_na_arvore(id, pag.rrn_filhos[pos])
 # -----------------------------------------------------
 
 
@@ -504,6 +504,63 @@ def main() -> None:
 
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
+        nome_arq_op: str = argv[2]
+        rrn_raiz: int = le_raiz()
+
+        with open(nome_arq_op, 'r', encoding='utf-8') as arq_op:
+            for linha in arq_op:
+                linha = linha.rstrip('\r\n')
+
+                if not linha:
+                    continue
+
+                operacao, argumento = linha.split(' ', 1)
+
+                if operacao == 'b':
+                    id_registro: int = int(argumento)
+                    print(f'Busca pelo registro de chave "{id_registro}"')
+                    achou, rrn_pag, pos_na_pag = busca_na_arvore(id_registro, rrn_raiz)
+                    if not achou:
+                        print(f'Erro: chave "{id_registro}" não encontrada')
+                    else:
+                        pag: Pagina = le_pagina(rrn_pag)
+                        byte_offset: int = (pag.chaves[pos_na_pag].byte_offset)
+                        with open('games.dat', 'rb') as arq_jogos:
+                            arq_jogos.seek(byte_offset)
+                            tam_bytes: bytes = arq_jogos.read(2)
+                            tam_registro: int = int.from_bytes(tam_bytes, 'little')
+                            registro: str = arq_jogos.read(tam_registro).decode('utf-8')
+                        print(f'{registro} ' f'({tam_registro} bytes - ' f'offset {byte_offset})')
+                    print()
+
+                elif operacao == 'i':
+                    registro = argumento
+                    id_registro = int(registro.split('|', 1)[0])
+                    print(f'Inserção do registro de chave ' f'"{id_registro}"')
+                    achou, _, _ = busca_na_arvore(id_registro, rrn_raiz)
+
+                    if achou:
+                        print(f'Erro: chave "{id_registro}" duplicada')
+                    else:
+                        registro_bytes: bytes = registro.encode('utf-8')
+                        tam_registro = len(registro_bytes)
+                        with open('games.dat', 'ab') as arq_jogos:
+                            byte_offset = arq_jogos.tell()
+                            arq_jogos.write(tam_registro.to_bytes(2, 'little'))
+                            arq_jogos.write(registro_bytes)
+                        chave = Chave()
+                        chave.id = id_registro
+                        chave.byte_offset = byte_offset
+                        rrn_raiz = insere_na_arvore(chave, rrn_raiz)
+
+                        # Atualiza o cabeçalho, pois uma divisão
+                        # pode ter criado uma nova raiz.
+                        with open('btree.dat', 'r+b') as arq_arvore_b:
+                            arq_arvore_b.seek(0)
+                            arq_arvore_b.write(
+                            pack(PREFIXO + FORMATO_CAB, rrn_raiz))
+                        print(f'{registro} ' f'({tam_registro} bytes - ' f'offset {byte_offset})')
+                    print()
         print("flag -e")
 
     elif flag == '-p':
