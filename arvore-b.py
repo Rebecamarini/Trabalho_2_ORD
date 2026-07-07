@@ -51,7 +51,7 @@ class Pagina:
 
 def calcula_pos_inicio_pag(rrn: int) -> int:
     '''
-    Retorna o byte offset do início da página de rrn *rrn*
+    Retorna o byte offset do início da página de RRN *rrn*
     '''
     return TAM_CAB + (TAM_PAG * rrn)
     
@@ -87,7 +87,7 @@ def constroi_pagina(infos_pag: tuple) -> Pagina:
 
 def le_pagina(rrn: int) -> Pagina:
     '''
-    Lê a página de rrn *rrn* armazenada no btree.dat e a retorna com um dado do tipo Pagina
+    Lê a página de RRN *rrn* armazenada no btree.dat e a retorna com um dado do tipo Pagina
     '''
     pos_inicio_pag: int = calcula_pos_inicio_pag(rrn)
     
@@ -116,7 +116,7 @@ def le_pagina(rrn: int) -> Pagina:
 
 def escreve_pagina(rrn: int, pag: Pagina) -> None:
     '''
-    Escreve *pag* no rrn *rrn* de btree.dat
+    Escreve *pag* no RRN *rrn* de btree.dat
     '''
     pos_escrita_pag: int = calcula_pos_inicio_pag(rrn)
 
@@ -144,7 +144,7 @@ def escreve_pagina(rrn: int, pag: Pagina) -> None:
 
 def novo_rrn() -> int:
     ''' 
-    Calcula o rrn da proxima pagina que sera gravada no arquivo da árvore.
+    Calcula o RRN da proxima pagina que sera gravada no arquivo da árvore.
     '''
     with open('btree.dat', 'rb') as arq_arvore_b:
         arq_arvore_b.seek(0, 2)
@@ -205,7 +205,7 @@ def busca_na_pagina (chave: int, pagina: Pagina) -> tuple[bool, int]:
 
 def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
     '''
-    Busca *chave* em uma árvore-B onde a raiz tem o rrn *rrn*
+    Busca *chave* em uma árvore-B onde a raiz tem o RRN *rrn*
     Retorna uma tupla com:
     - Se o elemento foi achado ou não
     - O rrn da página
@@ -238,9 +238,9 @@ def busca_na_arvore(chave: int, rrn: int) -> tuple[bool, int, int]:
 #   incremente pag.numChaves
 # fim FUNÇÃO
 
-def insere_chave_promo(chave: int, filhoD: Chave, pag: Pagina) -> None:
+def insere_chave_promo(chave: Chave, rrn_filho_dir: int, pag: Pagina) -> None:
     '''
-    A funcao insere a *chave* e *filho* promovidos em uma pagina
+    Insere a chave *chave* e o rrn *filho_dir* promovidos em *pag*
 
     '''
     if pag.num_chaves == (ORDEM - 1):
@@ -252,7 +252,7 @@ def insere_chave_promo(chave: int, filhoD: Chave, pag: Pagina) -> None:
         pag.rrn_filhos[i+1] = pag.rrn_filhos[i]
         i =  i - 1
     pag.chaves[i] = chave 
-    pag.rrn_filhos[i+1] = filhoD
+    pag.rrn_filhos[i+1] = rrn_filho_dir
     pag.num_chaves = pag.num_chaves + 1
 
 # -----------------------------------------------------
@@ -269,19 +269,19 @@ def insere_chave_promo(chave: int, filhoD: Chave, pag: Pagina) -> None:
 # fim FUNÇÃO
 
 # -----------------------------------------------------
-def divide(chave: int, filhoD: Chave, pag:Pagina)-> tuple[int, Chave, Pagina, Pagina]:
+def divide(chave: Chave, rrn_filho_dir: int, pag:Pagina)-> tuple[Chave, int, Pagina, Pagina]:
     '''
-    A funcao realiza a divisao de uma *pagina*  em 2 em caso de promocao de *chave* e *filho*
+    A funcao realiza a divisao de *pag* em duas em caso de promoção de *chave* e *rrn_filho_dir*
     Retorna uma tupla com:
     - A chave promovida 
-    - o filho direito da chave promovida
-    - a pagina atual 
-    - a pagina nova depois da promocao 
+    - O RRN do filho direito da chave promovida
+    - A página atual 
+    - A página nova depois da promoção
     '''
-    insere_chave_promo(chave, filhoD, pag)
-    meio = ORDEM//2 
+    insere_chave_promo(chave, rrn_filho_dir, pag)
+    meio = ORDEM // 2
     chave_pro = pag.chaves[meio]
-    filhod_pro = novo_rrn()
+    filho_dir_pro = novo_rrn()
     pag_atual = Pagina()
     pag_atual.chaves = pag.chaves[:meio] + [Chave() for _ in range(ORDEM - 1 - meio)]
     pag_atual.rrn_filhos = pag.rrn_filhos[:meio + 1] + [NULO] * (ORDEM - (meio + 1))
@@ -294,7 +294,7 @@ def divide(chave: int, filhoD: Chave, pag:Pagina)-> tuple[int, Chave, Pagina, Pa
     pag_nova.rrn_filhos = resto_filhos + [NULO] * (ORDEM - len(resto_filhos))
     pag_nova.num_chaves = len(resto_chaves)
 
-    return chave_pro, filhod_pro, pag_atual, pag_nova
+    return chave_pro, filho_dir_pro, pag_atual, pag_nova
 
     
 # -----------------------------------------------------
@@ -332,18 +332,19 @@ def divide(chave: int, filhoD: Chave, pag:Pagina)-> tuple[int, Chave, Pagina, Pa
 #     fim se
 #   fim se
 # fim função
-def insere_chave(chave:Chave, rrn_atual: int) -> tuple[Chave, Chave, bool]:
+
+def insere_chave(chave: Chave, rrn_atual: int) -> tuple[Chave|int, int, bool]:
     '''
-    A funcao insere a *chave* na pagina com divisao e promocao, 
+    A funcao insere com divisão e promoção a *chave* na página de RRN *rrn_atual* 
     Retorna uma tupla com:
     - A chave promovida 
-    - o filho direito da chave promovida
-    - e se houve insercao 
+    - O RRN do filho direito da chave promovida
+    - E se houve inserção
     '''
     if rrn_atual == NULO:
-        chave_pro = chave 
-        filhod_pro = NULO
-        return chave_pro, filhod_pro, True
+        chave_pro: Chave|int = chave 
+        filho_dir_pro: int = NULO
+        return chave_pro, filho_dir_pro, True
     else:
         pag = le_pagina(rrn_atual)
         achou, pos = busca_na_pagina(chave.id, pag)
@@ -351,20 +352,21 @@ def insere_chave(chave:Chave, rrn_atual: int) -> tuple[Chave, Chave, bool]:
     if achou:
         raise ValueError("Erro: Chave duplicada")
     
-    chave_pro, filhod_pro, promo  = insere_chave(chave,pag.rrn_filhos[pos])
+    chave_pro, filho_dir_pro, promo = insere_chave(chave, pag.rrn_filhos[pos])
+
     if not promo:
         return NULO, NULO , False
     else:
+        assert isinstance(chave_pro, Chave)
         if pag.num_chaves < (ORDEM - 1):
-            insere_chave_promo(chave_pro, filhod_pro, pag) 
+            insere_chave_promo(chave_pro, filho_dir_pro, pag) 
             escreve_pagina(rrn_atual, pag)
             return NULO, NULO ,False
         else:
-    
-            chave_pro, filhod_pro, pag_atual, pag_nova = divide(chave_pro, filhod_pro,pag)
+            chave_pro, filho_dir_pro, pag_atual, pag_nova = divide(chave_pro, filho_dir_pro,pag)
             escreve_pagina(rrn_atual, pag_atual)
-            escreve_pagina(filhod_pro, pag_nova)
-            return chave_pro, filhod_pro, True
+            escreve_pagina(filho_dir_pro, pag_nova)
+            return chave_pro, filho_dir_pro, True
         
 
 # -----------------------------------------------------
