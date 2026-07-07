@@ -311,6 +311,12 @@ def main() -> None:
     flag = argv[1]
 
     if flag == '-b':
+        try:
+            arquivo = open("games.dat", 'rb')
+            arquivo.close()
+        except FileNotFoundError:
+            print("Erro: o arquivo 'games.dat' não existe")
+            
         constroi_indices()
         print('Índices construídos com sucesso!')
     

@@ -404,7 +404,7 @@ def insere_na_arvore(chave: Chave, rrn_raiz: int) -> int:
     return rrn_raiz
 
 
-def constroi_indice() -> None:
+def constroi_arvore() -> None:
     '''
     Lê games.dat registro por registro, monta a árvore-B em btree.dat
     '''
@@ -450,10 +450,10 @@ def le_raiz() -> int:
             return NULO
 
 
-def imprime_pagina(rrn, pag):
-    print("Pagina ", rrn, ":")
+def imprime_pagina(rrn: int, pag: Pagina):
+    print("Página " + str(rrn) + ":")
 
-    linha_chaves = "Chaves  = "
+    linha_chaves = "Chaves = "
     linha_offsets = "Offsets = "
     for i in range(len(pag.chaves)):
         linha_chaves = linha_chaves + str(pag.chaves[i].id)
@@ -464,7 +464,7 @@ def imprime_pagina(rrn, pag):
     print(linha_chaves)
     print(linha_offsets)
 
-    linha_filhos = "Filhos  = "
+    linha_filhos = "Filhos = "
     for i in range(len(pag.rrn_filhos)):
         linha_filhos = linha_filhos + str(pag.rrn_filhos[i])
         if i < len(pag.rrn_filhos) - 1:
@@ -494,16 +494,35 @@ def imprime_arvore() -> None:
         print()
 
 
+def arquivo_existe(nome_arq: str) -> bool:
+    try:
+        arquivo = open(nome_arq, 'rb')
+        arquivo.close()
+        return True
+
+    except FileNotFoundError:
+        print(f'Erro: o arquivo "{nome_arq}" não existe')
+        return False
+
+
 def main() -> None: 
     flag = argv[1]
 
     if flag == '-b':
         # Criação do índice (árvore-B) a partir do arquivo de registros
-        constroi_indice()
-        print("flag -b")
+        if not arquivo_existe("games.dat"):
+            return
+        
+        constroi_arvore()
+        print('Árvore construída com sucesso!')
 
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
+        if not arquivo_existe("games.dat"):
+            return
+        if not arquivo_existe("btree.dat"):
+            return
+        
         nome_arq_op: str = argv[2]
         rrn_raiz: int = le_raiz()
 
@@ -561,12 +580,14 @@ def main() -> None:
                             pack(PREFIXO + FORMATO_CAB, rrn_raiz))
                         print(f'{registro} ' f'({tam_registro} bytes - ' f'offset {byte_offset})')
                     print()
-        print("flag -e")
+        print("As operações do arquivo *" + nome_arq_op + "* foram executadas com sucesso!")
 
     elif flag == '-p':
         # Impressão das informações do índice, i.e., da árvore-B
+        if not arquivo_existe("btree.dat"):
+            return
+        
         imprime_arvore()
-        print("flag -p")
         
 if __name__ == '__main__':
     main()
