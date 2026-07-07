@@ -455,7 +455,7 @@ def imprime_pagina(rrn: int, pag: Pagina):
 
     linha_chaves = "Chaves = "
     linha_offsets = "Offsets = "
-    for i in range(len(pag.chaves)):
+    for i in range(pag.num_chaves):
         linha_chaves = linha_chaves + str(pag.chaves[i].id)
         linha_offsets = linha_offsets + str(pag.chaves[i].byte_offset)
         if i < len(pag.chaves) - 1:
@@ -505,24 +505,35 @@ def arquivo_existe(nome_arq: str) -> bool:
         return False
 
 
-def main() -> None: 
+def main() -> None:
+    if len(argv) < 2:
+        print("Uso:")
+        print(f"python {argv[0]} -b")
+        print(f"python {argv[0]} -e <arquivo_operacoes>")
+        print(f"python {argv[0]} -p")
+        return
+
     flag = argv[1]
 
     if flag == '-b':
         # Criação do índice (árvore-B) a partir do arquivo de registros
         if not arquivo_existe("games.dat"):
             return
-        
+
         constroi_arvore()
         print('Árvore construída com sucesso!')
 
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
+        if len(argv) < 3:
+            print(f'Uso: python {argv[0]} -e <arquivo_operacoes>')
+            return
+
         if not arquivo_existe("games.dat"):
             return
         if not arquivo_existe("btree.dat"):
             return
-        
+
         nome_arq_op: str = argv[2]
         rrn_raiz: int = le_raiz()
 
@@ -539,55 +550,65 @@ def main() -> None:
                     id_registro: int = int(argumento)
                     print(f'Busca pelo registro de chave "{id_registro}"')
                     achou, rrn_pag, pos_na_pag = busca_na_arvore(id_registro, rrn_raiz)
+
                     if not achou:
                         print(f'Erro: chave "{id_registro}" não encontrada')
                     else:
                         pag: Pagina = le_pagina(rrn_pag)
-                        byte_offset: int = (pag.chaves[pos_na_pag].byte_offset)
+                        byte_offset: int = pag.chaves[pos_na_pag].byte_offset
+
                         with open('games.dat', 'rb') as arq_jogos:
                             arq_jogos.seek(byte_offset)
-                            tam_bytes: bytes = arq_jogos.read(2)
-                            tam_registro: int = int.from_bytes(tam_bytes, 'little')
-                            registro: str = arq_jogos.read(tam_registro).decode('utf-8')
-                        print(f'{registro} ' f'({tam_registro} bytes - ' f'offset {byte_offset})')
+                            tam_bytes = arq_jogos.read(2)
+                            tam_registro = int.from_bytes(tam_bytes, 'little')
+                            registro = arq_jogos.read(tam_registro).decode('utf-8')
+
+                        print(f'{registro} ({tam_registro} bytes - offset {byte_offset})')
                     print()
 
                 elif operacao == 'i':
                     registro = argumento
                     id_registro = int(registro.split('|', 1)[0])
-                    print(f'Inserção do registro de chave ' f'"{id_registro}"')
+
+                    print(f'Inserção do registro de chave "{id_registro}"')
+
                     achou, _, _ = busca_na_arvore(id_registro, rrn_raiz)
 
                     if achou:
                         print(f'Erro: chave "{id_registro}" duplicada')
                     else:
-                        registro_bytes: bytes = registro.encode('utf-8')
+                        registro_bytes = registro.encode('utf-8')
                         tam_registro = len(registro_bytes)
+
                         with open('games.dat', 'ab') as arq_jogos:
                             byte_offset = arq_jogos.tell()
                             arq_jogos.write(tam_registro.to_bytes(2, 'little'))
                             arq_jogos.write(registro_bytes)
+
                         chave = Chave()
                         chave.id = id_registro
                         chave.byte_offset = byte_offset
+
                         rrn_raiz = insere_na_arvore(chave, rrn_raiz)
 
-                        # Atualiza o cabeçalho, pois uma divisão
-                        # pode ter criado uma nova raiz.
                         with open('btree.dat', 'r+b') as arq_arvore_b:
                             arq_arvore_b.seek(0)
-                            arq_arvore_b.write(
-                            pack(PREFIXO + FORMATO_CAB, rrn_raiz))
-                        print(f'{registro} ' f'({tam_registro} bytes - ' f'offset {byte_offset})')
+                            arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, rrn_raiz))
+
+                        print(f'{registro} ({tam_registro} bytes - offset {byte_offset})')
                     print()
-        print("As operações do arquivo *" + nome_arq_op + "* foram executadas com sucesso!")
+
+        print(f'As operações do arquivo "{nome_arq_op}" foram executadas com sucesso!')
 
     elif flag == '-p':
         # Impressão das informações do índice, i.e., da árvore-B
         if not arquivo_existe("btree.dat"):
             return
-        
+
         imprime_arvore()
+
+    else:
+        print("Erro: opção inválida.")
         
 if __name__ == '__main__':
     main()
