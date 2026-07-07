@@ -281,7 +281,7 @@ def divide(chave: Chave, rrn_filho_dir: int, pag:Pagina)-> tuple[Chave, int, Pag
     insere_chave_promo(chave, rrn_filho_dir, pag)
     meio = ORDEM // 2
     chave_pro = pag.chaves[meio]
-    filho_dir_pro = novo_rrn()
+    rrn_filho_dir_pro = novo_rrn()
     pag_atual = Pagina()
     pag_atual.chaves = pag.chaves[:meio] + [Chave() for _ in range(ORDEM - 1 - meio)]
     pag_atual.rrn_filhos = pag.rrn_filhos[:meio + 1] + [NULO] * (ORDEM - (meio + 1))
@@ -294,7 +294,7 @@ def divide(chave: Chave, rrn_filho_dir: int, pag:Pagina)-> tuple[Chave, int, Pag
     pag_nova.rrn_filhos = resto_filhos + [NULO] * (ORDEM - len(resto_filhos))
     pag_nova.num_chaves = len(resto_chaves)
 
-    return chave_pro, filho_dir_pro, pag_atual, pag_nova
+    return chave_pro, rrn_filho_dir_pro, pag_atual, pag_nova
 
     
 # -----------------------------------------------------
@@ -343,8 +343,8 @@ def insere_chave(chave: Chave, rrn_atual: int) -> tuple[Chave|int, int, bool]:
     '''
     if rrn_atual == NULO:
         chave_pro: Chave|int = chave 
-        filho_dir_pro: int = NULO
-        return chave_pro, filho_dir_pro, True
+        rrn_filho_dir_pro: int = NULO
+        return chave_pro, rrn_filho_dir_pro, True
     else:
         pag = le_pagina(rrn_atual)
         achou, pos = busca_na_pagina(chave.id, pag)
@@ -352,21 +352,21 @@ def insere_chave(chave: Chave, rrn_atual: int) -> tuple[Chave|int, int, bool]:
     if achou:
         raise ValueError("Erro: Chave duplicada")
     
-    chave_pro, filho_dir_pro, promo = insere_chave(chave, pag.rrn_filhos[pos])
+    chave_pro, rrn_filho_dir_pro, promo = insere_chave(chave, pag.rrn_filhos[pos])
 
     if not promo:
         return NULO, NULO , False
     else:
         assert isinstance(chave_pro, Chave)
         if pag.num_chaves < (ORDEM - 1):
-            insere_chave_promo(chave_pro, filho_dir_pro, pag) 
+            insere_chave_promo(chave_pro, rrn_filho_dir_pro, pag) 
             escreve_pagina(rrn_atual, pag)
             return NULO, NULO ,False
         else:
-            chave_pro, filho_dir_pro, pag_atual, pag_nova = divide(chave_pro, filho_dir_pro,pag)
+            chave_pro, rrn_filho_dir_pro, pag_atual, pag_nova = divide(chave_pro, rrn_filho_dir_pro,pag)
             escreve_pagina(rrn_atual, pag_atual)
-            escreve_pagina(filho_dir_pro, pag_nova)
-            return chave_pro, filho_dir_pro, True
+            escreve_pagina(rrn_filho_dir_pro, pag_nova)
+            return chave_pro, rrn_filho_dir_pro, True
         
 
 # -----------------------------------------------------
@@ -386,17 +386,69 @@ def insere_chave(chave: Chave, rrn_atual: int) -> tuple[Chave|int, int, bool]:
 #   retorne raiz
 # fim FUNÇÃO
 # -----------------------------------------------------
-def insere_na_arvore(chave:Chave, raiz:int):
-    chave_pro, filhod_pro, promo = insere_chave(chave,raiz)
+def insere_na_arvore(chave: Chave, rrn_raiz: int) -> int:
+    '''
+    Insere *chave* na árvore-B que a raiz possui o RRN *rrn_raiz* e retorna 
+    o RRN da raiz da árvore-B com o elemento inserido.
+    '''
+    chave_pro, rrn_filho_dir_pro, promo = insere_chave(chave, rrn_raiz)
     if promo:
+        assert isinstance(chave_pro, Chave)
         pag_nova = Pagina()
         pag_nova.chaves[0] = chave_pro
-        pag_nova.rrn_filhos[0] = raiz
-        pag_nova.rrn_filhos[1] = filhod_pro
+        pag_nova.rrn_filhos[0] = rrn_raiz
+        pag_nova.rrn_filhos[1] = rrn_filho_dir_pro
         pag_nova.num_chaves = pag_nova.num_chaves + 1
-        raiz = novo_rrn()
-        escreve_pagina(raiz,pag_nova)
-    return raiz
+        rrn_raiz = novo_rrn()
+        escreve_pagina(rrn_raiz,pag_nova)
+    return rrn_raiz
+
+
+def constroi_indice() -> None:
+    '''
+    Lê games.dat registro por registro, monta a árvore-B em btree.dat
+    '''
+    # Cria o btree.dat com cabecalho indicando arvore vazia
+    with open('btree.dat', 'wb') as arq_arvore_b:
+        arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, NULO))
+
+    rrn_raiz = NULO
+
+    with open('games.dat', 'rb') as jogos:
+        while True:
+            offset = jogos.tell()          # offset
+            tam_bytes = jogos.read(2)
+            if not tam_bytes:
+                break                       # fim do arquivo
+
+            tam_int = int.from_bytes(tam_bytes, 'little')
+            registro = jogos.read(tam_int).decode('utf-8')
+            campos = registro.split(sep='|')
+            id_reg = int(campos[0])
+
+            chave = Chave()
+            chave.id = id_reg
+            chave.byte_offset = offset
+
+            rrn_raiz = insere_na_arvore(chave, rrn_raiz)
+
+    # atualiza o cabecalho com o RRN final da raiz
+    with open('btree.dat', 'r+b') as arq_arvore_b:
+        arq_arvore_b.seek(0)
+        arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, rrn_raiz))
+
+
+def le_raiz() -> int:
+    '''
+    Retorna o RRN da raiz de btree.dat, retorna NULO se o cabeçanho não corresponder a um RRN.
+    '''
+    with open('btree.dat', 'rb') as arq_arvore_b:
+        raiz_bytes = arq_arvore_b.read(TAM_CAB)    # le os primeiros bytes do arquivo (o cabecalho)
+        if len(raiz_bytes) == TAM_CAB:
+            return unpack(PREFIXO + FORMATO_CAB, raiz_bytes)[0]   # decodifica esses bytes
+        else:
+            return NULO
+
 
 def imprime_pagina(rrn, pag):
     print("Pagina ", rrn, ":")
@@ -420,58 +472,23 @@ def imprime_pagina(rrn, pag):
     print(linha_filhos)
 
 
-def constroi_indice() -> None:
+
+def imprime_arvore() -> None:
     '''
-    Lê games.dat registro por registro, monta a árvore-B em btree.dat
+    Imprime todas as páginas da árvore-B guardada em btree.dat por ordem de RRN, destacando a página raiz.
     '''
-    # Cria o btree.dat com cabecalho indicando arvore vazia
-    with open('btree.dat', 'wb') as arq_arvore_b:
-        arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, NULO))
-
-    raiz = NULO
-
-    with open('games.dat', 'rb') as jogos:
-        while True:
-            offset = jogos.tell()          # offset
-            tam_bytes = jogos.read(2)
-            if not tam_bytes:
-                break                       # fim do arquivo
-
-            tam_int = int.from_bytes(tam_bytes, 'little')
-            registro = jogos.read(tam_int).decode('utf-8')
-            campos = registro.split(sep='|')
-            id_reg = int(campos[0])
-
-            chave = Chave()
-            chave.id = id_reg
-            chave.byte_offset = offset
-
-            raiz = insere_na_arvore(chave, raiz)
-
-    # atualiza o cabecalho com o RRN final da raiz
-    with open('btree.dat', 'r+b') as arq_arvore_b:
-        arq_arvore_b.seek(0)
-        arq_arvore_b.write(pack(PREFIXO + FORMATO_CAB, raiz))
-
-
-def le_raiz() -> int:
-    with open('btree.dat', 'rb') as arq_arvore_b:
-        raiz_bytes = arq_arvore_b.read(TAM_CAB)      # le os primeiros bytes do arquivo (o cabecalho)
-        return unpack(PREFIXO + FORMATO_CAB, raiz_bytes)[0]   # decodifica esses bytes 
-
-def imprime_indice():
     total_paginas = novo_rrn()
+    rrn_raiz = le_raiz()
 
     for rrn in range(total_paginas):
-        raiz = le_raiz()
         pag = le_pagina(rrn)
 
-        if rrn == raiz:
+        if rrn == rrn_raiz:
             print("- - - - - - - - - - Raiz - - - - - - - - - -")
 
         imprime_pagina(rrn, pag)
 
-        if rrn == raiz:
+        if rrn == rrn_raiz:
             print("- - - - - - - - - - - - - - - - - - - - - -")
 
         print()
@@ -482,17 +499,17 @@ def main() -> None:
 
     if flag == '-b':
         # Criação do índice (árvore-B) a partir do arquivo de registros
-        print("flag -b")
         constroi_indice()
-    
+        print("flag -b")
+
     elif flag == '-e':
         # Execução de um arquivo de operações (apenas busca e inserção)
         print("flag -e")
 
     elif flag == '-p':
         # Impressão das informações do índice, i.e., da árvore-B
+        imprime_arvore()
         print("flag -p")
-        imprime_indice()
         
 if __name__ == '__main__':
     main()
